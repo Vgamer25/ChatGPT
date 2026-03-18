@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatGPT</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJI7dKa8PhJeeneF2OQwehzLo9fGQHBJ0LxA&s">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --bg-dark: #212121;
+            --sidebar-dark: #171717;
+            --text-main: #ececec;
+            --text-secondary: #b4b4b4;
+            --input-bg: #2f2f2f;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Sidebar Transition Logic */
+        .sidebar-container {
+            width: 52px;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--sidebar-dark);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            overflow: hidden;
+            z-index: 20;
+        }
+
+        .sidebar-container.expanded {
+            width: 260px;
+            align-items: flex-start;
+            padding: 12px;
+        }
+
+        .side-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .sidebar-container.expanded .side-icon {
+            width: 100%;
+            justify-content: flex-start;
+            padding: 0 10px;
+            gap: 12px;
+        }
+
+        .side-icon:hover {
+            background-color: #2f2f2f;
+            color: white;
+        }
+
+        .sidebar-text {
+            display: none;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .sidebar-container.expanded .sidebar-text {
+            display: block;
+        }
+
+        /* Top Navigation Overlay */
+        .top-nav {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .top-nav > * {
+            pointer-events: auto;
+        }
+
+        .nav-left-group {
+            display: flex;
+            align-items: center;
+            gap: 0px;
+            /* Moved significantly closer to the sidebar */
+            margin-left: 8px; 
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Adjusted calculation to stay consistent with the expanded sidebar */
+        .sidebar-container.expanded + main .nav-left-group {
+            margin-left: 8px; 
+        }
+
+        .model-selector {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .model-selector:hover {
+            background-color: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        .get-plus-badge {
+            background-color: #3e3e60;
+            color: #d1d1f7;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* Centered Landing State */
+        .landing-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding-bottom: 100px;
+        }
+
+        .landing-title {
+            font-size: 32px;
+            font-weight: 500;
+            margin-bottom: 40px;
+            letter-spacing: -0.02em;
+        }
+
+        /* Pill Input Bar */
+        .pill-input-wrapper {
+            width: 100%;
+            max-width: 720px;
+            background-color: var(--input-bg);
+            border-radius: 30px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .pill-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            padding: 10px 4px;
+            font-size: 16px;
+        }
+
+        .icon-btn {
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .icon-btn:hover {
+            background-color: #424242;
+            color: white;
+        }
+
+        .send-btn-circle {
+            background-color: white;
+            color: black;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+        }
+
+        /* Chat Message Styling */
+        .chat-container {
+            max-width: 48rem;
+            margin: 0 auto;
+            width: 100%;
+            padding-top: 80px;
+        }
+
+        .user-message-bubble {
+            background-color: #2f2f2f;
+            border-radius: 1.5rem;
+            padding: 10px 20px;
+            max-width: fit-content;
+            margin-left: auto;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+            font-size: 15px;
+        }
+
+        .ai-message-wrapper {
+            margin-bottom: 2.5rem;
+            width: 100%;
+        }
+
+        .ai-content {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #3d3d3d; border-radius: 10px; }
+
+        @keyframes dot-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.4); opacity: 1; }
+        }
+        .dot {
+            height: 4px; width: 4px; background-color: #8e8ea0; border-radius: 50%; display: inline-block; margin-right: 2px; animation: dot-pulse 1.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="flex h-screen w-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar-container hidden md:flex">
+        <div class="side-icon mb-4" onclick="toggleSidebar()">
+            <i class="fa-solid fa-bars"></i>
+            <span class="sidebar-text ml-2">Close Menu</span>
+        </div>
+        <div class="side-icon" onclick="createNewChat()">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span class="sidebar-text ml-2">New Chat</span>
+        </div>
+        <div class="side-icon">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span class="sidebar-text ml-2">Search</span>
+        </div>
+        <div class="side-icon">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span class="sidebar-text ml-2">History</span>
+        </div>
+        
+        <div class="mt-auto flex flex-col items-center w-full">
+            <div class="side-icon">
+                <i class="fa-solid fa-sparkles"></i>
+                <span class="sidebar-text ml-2">Explore GPTs</span>
+            </div>
+            <div class="side-icon">
+                <div class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[8px] font-bold text-white">DD</div>
+                <span class="sidebar-text ml-2">Upgrade Plan</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col relative h-full overflow-hidden">
+        
+        <!-- Top Nav -->
+        <div class="top-nav">
+            <div class="nav-left-group">
+                <div class="model-selector">
+                    <span>ChatGPT</span>
+                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                </div>
+            </div>
+            
+            <div class="get-plus-badge">
+                <i class="fa-solid fa-sparkles text-[10px]"></i>
+                Get Plus
+            </div>
+
+            <div class="flex items-center gap-4 pr-4">
+                <i class="fa-solid fa-user-plus text-sm text-[#b4b4b4] cursor-pointer hover:text-white transition-colors"></i>
+                <i class="fa-solid fa-expand text-sm text-[#b4b4b4] cursor-pointer hover:text-white transition-colors"></i>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chat-window" class="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+            <!-- Landing View -->
+            <div id="welcome-screen" class="landing-container">
+                <h1 class="landing-title">What are you working on?</h1>
+                <div class="pill-input-wrapper mb-4">
+                    <button class="icon-btn"><i class="fa-solid fa-plus"></i></button>
+                    <input type="text" id="landing-input" class="pill-input" placeholder="Ask anything" onkeydown="if(event.key === 'Enter') handleLandingSend()">
+                    <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
+                    <button class="send-btn-circle" onclick="handleLandingSend()">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="message-list" class="chat-container px-4"></div>
+        </div>
+
+        <!-- Sticky Bottom Input -->
+        <div id="sticky-input-container" class="hidden w-full pb-8 px-4">
+            <div class="max-w-3xl mx-auto pill-input-wrapper">
+                <button class="icon-btn"><i class="fa-solid fa-plus"></i></button>
+                <textarea id="chat-input" rows="1" placeholder="Message ChatGPT" class="pill-input resize-none h-auto max-h-[150px]" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
+                <div class="flex items-center gap-2">
+                    <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
+                    <button id="send-btn" onclick="handleSend()" class="send-btn-circle">
+                        <i class="fa-solid fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // API Configuration merged from config.js
+        const GITHUB_TOKENS = [
+            "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",
+            "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",
+            "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",
+            "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",
+            "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"
+        ];
+        const GITHUB_ENDPOINT = "https://models.github.io/inference/chat/completions";
+        const DEFAULT_MODEL = "gpt-4o";
+
+        let currentConversation = [];
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('expanded');
+        }
+
+        function createNewChat() {
+            currentConversation = [];
+            document.getElementById('message-list').innerHTML = '';
+            document.getElementById('welcome-screen').classList.remove('hidden');
+            document.getElementById('welcome-screen').classList.add('flex');
+            document.getElementById('sticky-input-container').classList.add('hidden');
+        }
+
+        function handleLandingSend() {
+            const input = document.getElementById('landing-input');
+            const val = input.value.trim();
+            if(!val) return;
+            document.getElementById('welcome-screen').classList.add('hidden');
+            document.getElementById('welcome-screen').classList.remove('flex');
+            document.getElementById('sticky-input-container').classList.remove('hidden');
+            document.getElementById('chat-input').value = val;
+            handleSend();
+            input.value = '';
+        }
+
+        function addMessageToUI(role, content) {
+            const messageList = document.getElementById('message-list');
+            const wrapper = document.createElement('div');
+            
+            if (role === 'user') {
+                wrapper.innerHTML = `<div class="user-message-bubble">${content.replace(/\n/g, '<br>')}</div>`;
+            } else {
+                wrapper.className = 'ai-message-wrapper';
+                wrapper.innerHTML = `
+                    <div class="ai-content">
+                        ${formatAIContent(content)}
+                    </div>
+                    <div class="ai-actions">
+                        <i class="fa-regular fa-copy action-icon" title="Copy"></i>
+                        <i class="fa-regular fa-thumbs-up action-icon" title="Good response"></i>
+                        <i class="fa-regular fa-thumbs-down action-icon" title="Bad response"></i>
+                        <i class="fa-solid fa-arrow-up-from-bracket action-icon" title="Share"></i>
+                        <i class="fa-solid fa-rotate-right action-icon" title="Regenerate"></i>
+                        <i class="fa-solid fa-ellipsis action-icon"></i>
+                    </div>
+                `;
+            }
+            
+            messageList.appendChild(wrapper);
+            const chatWin = document.getElementById('chat-window');
+            chatWin.scrollTo({ top: chatWin.scrollHeight, behavior: 'smooth' });
+        }
+
+        function formatAIContent(text) {
+            let formatted = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+                return `<pre class="bg-[#0d0d0d] p-4 rounded-lg my-4 overflow-x-auto text-sm border border-white/10"><code>${code.trim()}</code></pre>`;
+            });
+            formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            formatted = formatted.replace(/\n/g, '<br>');
+            return formatted;
+        }
+
+        async function handleSend() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            input.value = '';
+            input.style.height = 'auto';
+            addMessageToUI('user', text);
+            currentConversation.push({ role: 'user', content: text });
+
+            const typing = document.createElement('div');
+            typing.id = 'typing-indicator';
+            typing.className = 'ai-message-wrapper';
+            typing.innerHTML = `<div class="flex items-center h-8 gap-1"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+            document.getElementById('message-list').appendChild(typing);
+            
+            try {
+                const token = GITHUB_TOKENS[Math.floor(Math.random() * GITHUB_TOKENS.length)];
+                const res = await fetch(GITHUB_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ model: DEFAULT_MODEL, messages: currentConversation })
+                });
+                const data = await res.json();
+                typing.remove();
+                const response = data.choices[0].message.content;
+                addMessageToUI('assistant', response);
+                currentConversation.push({ role: 'assistant', content: response });
+            } catch (err) {
+                typing.remove();
+                addMessageToUI('assistant', "Connection error. Please try again.");
+            }
+        }
+
+        document.getElementById('chat-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+            }
+        });
+    </script>
+</body>
+</html>
