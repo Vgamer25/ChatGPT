@@ -1,473 +1,1968 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatGPT</title>
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJI7dKa8PhJeeneF2OQwehzLo9fGQHBJ0LxA&s">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>gpt-4o</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        :root {
-            --bg-dark: #212121;
-            --sidebar-dark: #171717;
-            --text-main: #ececec;
-            --text-secondary: #b4b4b4;
-            --input-bg: #2f2f2f;
-        }
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html, body { margin: 0; width: 100%; height: 100%; background: #fff; color: #000; overflow: hidden; }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0;
-            overflow: hidden;
-        }
+        #app { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; }
 
-        /* Sidebar Transition Logic */
-        .sidebar-container {
-            width: 52px;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            background-color: var(--sidebar-dark);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            border-right: 1px solid rgba(255,255,255,0.05);
-            overflow: hidden;
-            z-index: 20;
-        }
-
-        .sidebar-container.expanded {
-            width: 260px;
-            align-items: flex-start;
-            padding: 12px;
-        }
-
-        .side-icon {
-            width: 32px;
-            height: 32px;
+        #menu-toggle {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 101;
+            background: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
-            margin-bottom: 8px;
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: background 0.2s, color 0.2s;
-            flex-shrink: 0;
         }
+        #menu-toggle.open { background: transparent; }
+        #menu-toggle svg { width: 24px; height: 24px; transition: transform 0.2s ease-out; }
+        #menu-toggle.open svg { transform: rotate(-90deg); }
 
-        .sidebar-container.expanded .side-icon {
-            width: 100%;
-            justify-content: flex-start;
-            padding: 0 10px;
-            gap: 12px;
-        }
-
-        .side-icon:hover {
-            background-color: #2f2f2f;
-            color: white;
-        }
-
-        .sidebar-text {
-            display: none;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        .sidebar-container.expanded .sidebar-text {
-            display: block;
-        }
-
-        /* Top Navigation Overlay */
-        .top-nav {
-            position: absolute;
+        #sidebar {
+            position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            height: 60px;
+            width: 260px;
+            height: 100%;
+            background: #f9f9f9;
+            border-right: 1px solid #e5e5e5;
+            transform: translateX(-100%);
+            transition: transform 0.2s ease-out;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            padding: 60px 12px 12px;
+        }
+        #sidebar.open { transform: translateX(0); }
+
+        #new-chat-btn {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 8px;
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        .top-nav > * {
-            pointer-events: auto;
-        }
-
-        .nav-left-group {
-            display: flex;
-            align-items: center;
-            gap: 0px;
-            /* Moved significantly closer to the sidebar */
-            margin-left: 8px; 
-            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Adjusted calculation to stay consistent with the expanded sidebar */
-        .sidebar-container.expanded + main .nav-left-group {
-            margin-left: 8px; 
-        }
-
-        .model-selector {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            border-radius: 10px;
-            font-weight: 600;
-            color: var(--text-secondary);
+            padding: 10px 14px;
+            background: #fff;
+            border: 1px solid #b5b5b5;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s, color 0.2s;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
         }
+        #new-chat-btn svg { width: 16px; height: 16px; }
 
-        .model-selector:hover {
-            background-color: rgba(255,255,255,0.08);
-            color: white;
+        #history-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .history-item {
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+        .history-item:hover, .history-item.active { background: #e5e5e5; }
 
-        .get-plus-badge {
-            background-color: #3e3e60;
-            color: #d1d1f7;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        #bg-name {
             position: absolute;
+            top: 40%;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: #e0e0e0;
+            z-index: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+            user-select: none;
         }
 
-        /* Centered Landing State */
-        .landing-container {
+        #chat-zone {
+            flex: 1;
+            overflow-y: auto;
+            padding: 60px 20px 120px;
+            z-index: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-            padding-bottom: 100px;
+            gap: 24px;
         }
 
-        .landing-title {
-            font-size: 32px;
-            font-weight: 500;
-            margin-bottom: 40px;
-            letter-spacing: -0.02em;
-        }
+        .message-row { width: 100%; max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; }
+        .msg-user { align-items: flex-end; }
+        .msg-ai { align-items: flex-start; }
 
-        /* Pill Input Bar */
-        .pill-input-wrapper {
-            width: 100%;
-            max-width: 720px;
-            background-color: var(--input-bg);
-            border-radius: 30px;
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
+        .bubble-user { background: #f4f4f4; padding: 12px 18px; border-radius: 20px; max-width: 80%; line-height: 1.5; word-wrap: break-word; }
+        .bubble-ai { width: 100%; line-height: 1.6; }
 
-        .pill-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            outline: none;
-            color: white;
-            padding: 10px 4px;
-            font-size: 16px;
-        }
-
-        .icon-btn {
-            color: var(--text-secondary);
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .ai-header { color: #888; font-size: 0.9rem; margin-bottom: 6px; display: flex; align-items: center; }
+        .loader {
+            width: 1.2mm;
+            height: 1.2mm;
             border-radius: 50%;
-            transition: background 0.2s;
+            background: #000;
+            margin-right: 8px;
+            animation: pulse 1s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0% { transform: scale(0.5); opacity: 0.5; }
+            50% { transform: scale(3.5); opacity: 1; }
+            100% { transform: scale(0.5); opacity: 0.5; }
         }
 
-        .icon-btn:hover {
-            background-color: #424242;
-            color: white;
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
 
-        .send-btn-circle {
-            background-color: white;
-            color: black;
-            width: 32px;
-            height: 32px;
+        .ai-content, .ai-after-content { white-space: pre-wrap; word-wrap: break-word; }
+        .ai-after-content { margin-top: 8px; }
+
+        .rich-block-text { white-space: pre-wrap; word-wrap: break-word; }
+        .code-wrap { margin: 10px 0; border-radius: 14px; background: #f5f7fa; overflow: hidden; }
+        .code-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; color: #5f6773; font-size: 0.8rem; border-bottom: 1px solid #e7ebf0; }
+        .code-lang { text-transform: lowercase; font-weight: 600; }
+        .code-spacer { flex: 1; }
+        .code-head-btn { border: none; background: transparent; color: #333; cursor: pointer; padding: 2px; display: inline-flex; align-items: center; justify-content: center; }
+        .code-head-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .code-pre { margin: 0; padding: 12px; overflow-x: auto; white-space: pre; font-size: 0.88rem; line-height: 1.45; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; color: #1f2937; }
+        .tok-comment { color: #6b7280; font-style: italic; }
+        .tok-keyword { color: #1d4ed8; font-weight: 600; }
+        .tok-string { color: #b45309; }
+        .tok-number { color: #0f766e; }
+        .tok-tag { color: #be185d; }
+        .tok-operator { color: #374151; }
+        .tok-function { color: #7c3aed; }
+        .tok-property { color: #0f766e; }
+
+        #preview-modal { position: fixed; inset: 0; background: #fff; z-index: 250; display: none; }
+        #preview-modal.open { display: block; }
+        #preview-frame { width: 100%; height: 100%; border: none; background: #fff; }
+        #preview-close { position: absolute; top: 12px; right: 12px; width: 38px; height: 38px; border: none; border-radius: 10px; background: #fff; color: #000; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; z-index: 251; }
+        #preview-close svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+        .web-block-text {
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .web-visit-row {
+            margin: 8px 0;
+            color: #7a7a7a;
+            font-size: 0.93rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .web-visit-indicator {
+            width: 14px;
+            height: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .visit-spinner {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1.5px solid #b9b9b9;
+            border-top-color: #575757;
+            animation: spin 0.75s linear infinite;
+        }
+        .visit-check {
+            width: 13px;
+            height: 13px;
+            color: #10a37f;
+        }
+
+        .ai-image-zone { margin-top: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+        .image-loading-card {
+            width: min(100%, 520px);
+            aspect-ratio: 1 / 1;
+            border-radius: 16px;
+            background: #f1f1f1;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
+            animation: imageCardPulse 1s ease-in-out infinite;
+        }
+        @keyframes imageCardPulse {
+            0% { background: #f2f2f2; }
+            50% { background: #ededed; }
+            100% { background: #f3f3f3; }
+        }
+        .image-timer { color: #8d8d8d; font-size: 1rem; font-variant-numeric: tabular-nums; }
+        .generated-image { width: min(100%, 520px); border-radius: 16px; display: block; border: 1px solid #efefef; }
+        .generation-time { color: #787878; font-size: 0.88rem; }
+
+        .image-meta-row {
+            width: min(100%, 520px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .image-action-row { display: flex; gap: 8px; margin-top: 0; }
+        .image-btn {
+            border: 1px solid #d8d8d8;
+            background: #fff;
+            color: #333;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.82rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             cursor: pointer;
-            transition: opacity 0.2s;
-            flex-shrink: 0;
+        }
+        .image-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        .ai-footer { display: flex; gap: 12px; margin-top: 10px; }
+        .icon-btn {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            color: #666;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .icon-btn:hover { color: #000; }
+        .icon-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        @keyframes checkPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
-        /* Chat Message Styling */
-        .chat-container {
-            max-width: 48rem;
-            margin: 0 auto;
-            width: 100%;
-            padding-top: 80px;
+        #input-container {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 800px;
+            background: #fff;
+            border: 1px solid #d9d9e3;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            padding: 8px 12px 8px 20px;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
-
-        .user-message-bubble {
-            background-color: #2f2f2f;
-            border-radius: 1.5rem;
-            padding: 10px 20px;
-            max-width: fit-content;
-            margin-left: auto;
-            margin-bottom: 2rem;
-            line-height: 1.5;
-            font-size: 15px;
+        #attach-btn {
+            background: none;
+            border: none;
+            padding: 8px 6px 8px 0;
+            cursor: pointer;
+            color: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
-        .ai-message-wrapper {
-            margin-bottom: 2.5rem;
-            width: 100%;
+        #attach-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
+        #chat-input { flex: 1; border: none; outline: none; font-size: 1rem; background: transparent; padding: 8px 0; }
+        #send-btn { background: none; border: none; padding: 8px; cursor: pointer; color: #000; display: flex; align-items: center; justify-content: center; }
+        #send-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-        .ai-content {
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 0.75rem;
+        #composer-attachment {
+            position: absolute;
+            bottom: 88px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 800px;
+            display: none;
+            z-index: 11;
         }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 5px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #3d3d3d; border-radius: 10px; }
-
-        @keyframes dot-pulse {
-            0%, 100% { transform: scale(1); opacity: 0.4; }
-            50% { transform: scale(1.4); opacity: 1; }
+        .attachment-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            border: 1px solid #d9d9e3;
+            border-radius: 12px;
+            padding: 8px 10px;
         }
-        .dot {
-            height: 4px; width: 4px; background-color: #8e8ea0; border-radius: 50%; display: inline-block; margin-right: 2px; animation: dot-pulse 1.5s infinite ease-in-out;
+        .attachment-thumb {
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #ececec;
+        }
+        .attachment-label {
+            color: #666;
+            font-size: 0.85rem;
+        }
+        .attachment-remove {
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            padding: 2px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .attachment-remove svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
     </style>
 </head>
-<body class="flex h-screen w-screen overflow-hidden">
+<body>
+<div id="app">
+    <button id="menu-toggle" title="Menu">
+        <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="4" x2="20" y2="4"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="20" x2="20" y2="20"></line>
+        </svg>
+    </button>
 
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar-container hidden md:flex">
-        <div class="side-icon mb-4" onclick="toggleSidebar()">
-            <i class="fa-solid fa-bars"></i>
-            <span class="sidebar-text ml-2">Close Menu</span>
-        </div>
-        <div class="side-icon" onclick="createNewChat()">
-            <i class="fa-solid fa-pen-to-square"></i>
-            <span class="sidebar-text ml-2">New Chat</span>
-        </div>
-        <div class="side-icon">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <span class="sidebar-text ml-2">Search</span>
-        </div>
-        <div class="side-icon">
-            <i class="fa-solid fa-clock-rotate-left"></i>
-            <span class="sidebar-text ml-2">History</span>
-        </div>
-        
-        <div class="mt-auto flex flex-col items-center w-full">
-            <div class="side-icon">
-                <i class="fa-solid fa-sparkles"></i>
-                <span class="sidebar-text ml-2">Explore GPTs</span>
-            </div>
-            <div class="side-icon">
-                <div class="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[8px] font-bold text-white">DD</div>
-                <span class="sidebar-text ml-2">Upgrade Plan</span>
-            </div>
-        </div>
-    </aside>
+    <div id="sidebar">
+        <button id="new-chat-btn">
+            <span>new chat</span>
+            <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"></path>
+            </svg>
+        </button>
+        <div id="history-list"></div>
+    </div>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col relative h-full overflow-hidden">
-        
-        <!-- Top Nav -->
-        <div class="top-nav">
-            <div class="nav-left-group">
-                <div class="model-selector">
-                    <span>ChatGPT</span>
-                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                </div>
-            </div>
-            
-            <div class="get-plus-badge">
-                <i class="fa-solid fa-sparkles text-[10px]"></i>
-                Get Plus
-            </div>
+    <div id="bg-name">gpt-4o</div>
+    <div id="chat-zone"></div>
 
-            <div class="flex items-center gap-4 pr-4">
-                <i class="fa-solid fa-user-plus text-sm text-[#b4b4b4] cursor-pointer hover:text-white transition-colors"></i>
-                <i class="fa-solid fa-expand text-sm text-[#b4b4b4] cursor-pointer hover:text-white transition-colors"></i>
-            </div>
-        </div>
+    <div id="composer-attachment"></div>
 
-        <!-- Chat Area -->
-        <div id="chat-window" class="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
-            <!-- Landing View -->
-            <div id="welcome-screen" class="landing-container">
-                <h1 class="landing-title">What are you working on?</h1>
-                <div class="pill-input-wrapper mb-4">
-                    <button class="icon-btn"><i class="fa-solid fa-plus"></i></button>
-                    <input type="text" id="landing-input" class="pill-input" placeholder="Ask anything" onkeydown="if(event.key === 'Enter') handleLandingSend()">
-                    <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
-                    <button class="send-btn-circle" onclick="handleLandingSend()">
-                        <i class="fa-solid fa-arrow-up"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div id="message-list" class="chat-container px-4"></div>
-        </div>
+    <div id="input-container">
+        <button id="attach-btn" title="Importer une image" type="button">
+            <svg viewBox="0 0 24 24">
+                <path d="M21.44 11.05 12.25 20.25a6 6 0 0 1-8.49-8.49l9.19-9.2a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 1 1-2.82-2.83l8.49-8.48"></path>
+            </svg>
+        </button>
+        <input type="text" id="chat-input" placeholder="Message gpt-4o..." autocomplete="off" />
+        <button id="send-btn" title="Envoyer">
+            <svg viewBox="0 0 24 24">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+        </button>
+    </div>
+    <input id="image-input" type="file" accept="image/*" style="display:none;" />
+</div>
 
-        <!-- Sticky Bottom Input -->
-        <div id="sticky-input-container" class="hidden w-full pb-8 px-4">
-            <div class="max-w-3xl mx-auto pill-input-wrapper">
-                <button class="icon-btn"><i class="fa-solid fa-plus"></i></button>
-                <textarea id="chat-input" rows="1" placeholder="Message ChatGPT" class="pill-input resize-none h-auto max-h-[150px]" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
-                <div class="flex items-center gap-2">
-                    <button class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
-                    <button id="send-btn" onclick="handleSend()" class="send-btn-circle">
-                        <i class="fa-solid fa-arrow-up"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </main>
+<div id="preview-modal" aria-hidden="true">
+    <button id="preview-close" title="Fermer">
+        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+    </button>
+    <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+</div>
 
-    <script>
-        // API Configuration merged from config.js
-        const GITHUB_TOKENS = [
-            "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",
-            "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",
-            "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",
-            "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",
-            "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"
-        ];
-        const GITHUB_ENDPOINT = "https://models.github.io/inference/chat/completions";
-        const DEFAULT_MODEL = "gpt-4o";
+<script>
+    const GITHUB_TOKENS = [
+        "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",
+        "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",
+        "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",
+        "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",
+        "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"
+    ];
+    const ENDPOINT = "https://models.github.ai/inference/chat/completions";
+    const CEREBRAS_API_KEY = "csk-ffyrffnwy82ck8j9xnx3v66kk9d9mc3dkky6er483w6m8pw6";
+    const GROQ_API_KEY = "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";
+    const OPENROUTER_API_KEY = "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";
+    const CF_WORKER_IMAGE_URL = "https://gpt4o.hugdu77777.workers.dev";
 
-        let currentConversation = [];
+    const systemPrompt = {
+        role: "system",
+        content: [
+           "You are chatgpt, a helpful chatbot."
+        ].join("\n")
+    };
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('expanded');
-        }
+    let messages = [{ ...systemPrompt }];
+    let conversations = [];
+    let activeConvIndex = null;
+    let isFirstMsg = true;
+    let pendingImage = null;
+    let imageHandleCounter = 1200;
 
-        function createNewChat() {
-            currentConversation = [];
-            document.getElementById('message-list').innerHTML = '';
-            document.getElementById('welcome-screen').classList.remove('hidden');
-            document.getElementById('welcome-screen').classList.add('flex');
-            document.getElementById('sticky-input-container').classList.add('hidden');
-        }
+    function createImageHandle(prefix) {
+        imageHandleCounter += 1;
+        const seed = Math.floor(Math.random() * 90) + 10;
+        return `#image${prefix}${imageHandleCounter}${seed}`;
+    }
 
-        function handleLandingSend() {
-            const input = document.getElementById('landing-input');
-            const val = input.value.trim();
-            if(!val) return;
-            document.getElementById('welcome-screen').classList.add('hidden');
-            document.getElementById('welcome-screen').classList.remove('flex');
-            document.getElementById('sticky-input-container').classList.remove('hidden');
-            document.getElementById('chat-input').value = val;
-            handleSend();
-            input.value = '';
-        }
+    const chatZone = document.getElementById("chat-zone");
+    const chatInput = document.getElementById("chat-input");
+    const sendBtn = document.getElementById("send-btn");
+    const attachBtn = document.getElementById("attach-btn");
+    const imageInput = document.getElementById("image-input");
+    const composerAttachment = document.getElementById("composer-attachment");
+    const bgName = document.getElementById("bg-name");
+    const menuToggle = document.getElementById("menu-toggle");
+    const sidebar = document.getElementById("sidebar");
+    const newChatBtn = document.getElementById("new-chat-btn");
+    const historyList = document.getElementById("history-list");
+    const previewModal = document.getElementById("preview-modal");
+    const previewFrame = document.getElementById("preview-frame");
+    const previewClose = document.getElementById("preview-close");
 
-        function addMessageToUI(role, content) {
-            const messageList = document.getElementById('message-list');
-            const wrapper = document.createElement('div');
-            
-            if (role === 'user') {
-                wrapper.innerHTML = `<div class="user-message-bubble">${content.replace(/\n/g, '<br>')}</div>`;
-            } else {
-                wrapper.className = 'ai-message-wrapper';
-                wrapper.innerHTML = `
-                    <div class="ai-content">
-                        ${formatAIContent(content)}
-                    </div>
-                    <div class="ai-actions">
-                        <i class="fa-regular fa-copy action-icon" title="Copy"></i>
-                        <i class="fa-regular fa-thumbs-up action-icon" title="Good response"></i>
-                        <i class="fa-regular fa-thumbs-down action-icon" title="Bad response"></i>
-                        <i class="fa-solid fa-arrow-up-from-bracket action-icon" title="Share"></i>
-                        <i class="fa-solid fa-rotate-right action-icon" title="Regenerate"></i>
-                        <i class="fa-solid fa-ellipsis action-icon"></i>
-                    </div>
-                `;
+    function extractCodeBlocks(text) {
+        const input = String(text || "");
+        const regex = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+        const blocks = [];
+        let cursor = 0;
+        let match;
+        while ((match = regex.exec(input)) !== null) {
+            if (match.index > cursor) {
+                blocks.push({ type: "text", content: input.slice(cursor, match.index) });
             }
-            
-            messageList.appendChild(wrapper);
-            const chatWin = document.getElementById('chat-window');
-            chatWin.scrollTo({ top: chatWin.scrollHeight, behavior: 'smooth' });
+            blocks.push({ type: "code", lang: (match[1] || "code").trim().toLowerCase(), content: match[2] || "" });
+            cursor = regex.lastIndex;
+        }
+        if (cursor < input.length) blocks.push({ type: "text", content: input.slice(cursor) });
+        return blocks.length ? blocks : [{ type: "text", content: input }];
+    }
+
+    function highlightCode(code, lang) {
+        const esc = escapeHTML(code);
+        if (lang === "html" || lang === "xml") {
+            return esc
+                .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="tok-comment">$1</span>')
+                .replace(/(&lt;\/?[a-zA-Z0-9-]+)/g, '<span class="tok-tag">$1</span>')
+                .replace(/("[^"]*"|'[^']*')/g, '<span class="tok-string">$1</span>');
         }
 
-        function formatAIContent(text) {
-            let formatted = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
-                return `<pre class="bg-[#0d0d0d] p-4 rounded-lg my-4 overflow-x-auto text-sm border border-white/10"><code>${code.trim()}</code></pre>`;
-            });
-            formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-            formatted = formatted.replace(/\n/g, '<br>');
-            return formatted;
+        return esc
+            .replace(/(\/\/.*|#.*)$/gm, '<span class="tok-comment">$1</span>')
+            .replace(/\b(const|let|var|function|return|if|else|for|while|class|import|export|async|await|try|catch|new|from|def|print|True|False|None)\b/g, '<span class="tok-keyword">$1</span>')
+            .replace(/("[^"]*"|'[^']*'|`[^`]*`)/g, '<span class="tok-string">$1</span>')
+            .replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tok-number">$1</span>');
+    }
+
+    function canExecuteCode(lang) {
+        return ["html", "htm"].includes(String(lang || "").toLowerCase());
+    }
+
+    function openCodePreview(code) {
+        previewFrame.srcdoc = code;
+        previewModal.classList.add("open");
+        previewModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeCodePreview() {
+        previewModal.classList.remove("open");
+        previewModal.setAttribute("aria-hidden", "true");
+        previewFrame.srcdoc = "";
+    }
+
+    async function copyCodeText(value, btn) {
+        await navigator.clipboard.writeText(value || "");
+        const initial = btn.innerHTML;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" style="color:#1aa34a"><path d="M20 6 9 17l-5-5"></path></svg>';
+        setTimeout(() => { btn.innerHTML = initial; }, 900);
+    }
+
+    function buildCodeBlock(lang, code) {
+        const wrap = document.createElement("div");
+        wrap.className = "code-wrap";
+
+        const head = document.createElement("div");
+        head.className = "code-head";
+
+        const langEl = document.createElement("span");
+        langEl.className = "code-lang";
+        langEl.textContent = lang || "code";
+        head.appendChild(langEl);
+
+        const spacer = document.createElement("span");
+        spacer.className = "code-spacer";
+        head.appendChild(spacer);
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "code-head-btn";
+        copyBtn.title = "Copier";
+        copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        copyBtn.addEventListener("click", () => copyCodeText(code, copyBtn));
+        head.appendChild(copyBtn);
+
+        const runBtn = document.createElement("button");
+        runBtn.className = "code-head-btn";
+        runBtn.title = "Executer";
+        runBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>';
+        if (canExecuteCode(lang)) {
+            runBtn.addEventListener("click", () => openCodePreview(code));
+        } else {
+            runBtn.style.opacity = "0.35";
+            runBtn.style.cursor = "default";
         }
+        head.appendChild(runBtn);
 
-        async function handleSend() {
-            const input = document.getElementById('chat-input');
-            const text = input.value.trim();
-            if (!text) return;
+        const pre = document.createElement("pre");
+        pre.className = "code-pre";
+        const codeEl = document.createElement("code");
+        codeEl.innerHTML = highlightCode(code, lang);
+        pre.appendChild(codeEl);
 
-            input.value = '';
-            input.style.height = 'auto';
-            addMessageToUI('user', text);
-            currentConversation.push({ role: 'user', content: text });
+        wrap.appendChild(head);
+        wrap.appendChild(pre);
+        return wrap;
+    }
 
-            const typing = document.createElement('div');
-            typing.id = 'typing-indicator';
-            typing.className = 'ai-message-wrapper';
-            typing.innerHTML = `<div class="flex items-center h-8 gap-1"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
-            document.getElementById('message-list').appendChild(typing);
-            
-            try {
-                const token = GITHUB_TOKENS[Math.floor(Math.random() * GITHUB_TOKENS.length)];
-                const res = await fetch(GITHUB_ENDPOINT, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ model: DEFAULT_MODEL, messages: currentConversation })
-                });
-                const data = await res.json();
-                typing.remove();
-                const response = data.choices[0].message.content;
-                addMessageToUI('assistant', response);
-                currentConversation.push({ role: 'assistant', content: response });
-            } catch (err) {
-                typing.remove();
-                addMessageToUI('assistant', "Connection error. Please try again.");
+    function renderRichAssistantText(container, text) {
+        container.innerHTML = "";
+        const blocks = extractCodeBlocks(text);
+        blocks.forEach((block) => {
+            if (block.type === "text") {
+                if (!block.content) return;
+                const textDiv = document.createElement("div");
+                textDiv.className = "rich-block-text";
+                textDiv.innerHTML = escapeHTML(block.content).replace(/\n/g, "<br>");
+                container.appendChild(textDiv);
+                return;
             }
-        }
+            container.appendChild(buildCodeBlock(block.lang, block.content));
+        });
+    }
 
-        document.getElementById('chat-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+    previewClose.addEventListener("click", closeCodePreview);
+
+    menuToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+        menuToggle.classList.toggle("open");
+    });
+
+    document.addEventListener("click", (e) => {
+        if (sidebar.classList.contains("open") && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+            sidebar.classList.remove("open");
+            menuToggle.classList.remove("open");
+        }
+    });
+
+    newChatBtn.addEventListener("click", () => {
+        activeConvIndex = null;
+        messages = [{ ...systemPrompt }];
+        pendingImage = null;
+        renderComposerAttachment();
+        chatZone.innerHTML = "";
+        bgName.style.display = "block";
+        setTimeout(() => { bgName.style.opacity = "1"; }, 20);
+        isFirstMsg = true;
+        updateHistoryList();
+        sidebar.classList.remove("open");
+        menuToggle.classList.remove("open");
+    });
+
+    attachBtn.addEventListener("click", () => imageInput.click());
+
+    imageInput.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        await setPendingImageFromFile(file);
+    });
+
+    chatInput.addEventListener("paste", async (e) => {
+        const items = e.clipboardData?.items || [];
+        for (const item of items) {
+            if (item.type && item.type.startsWith("image/")) {
                 e.preventDefault();
-                handleSend();
+                const file = item.getAsFile();
+                await setPendingImageFromFile(file);
+                return;
+            }
+        }
+    });
+
+    function escapeHTML(str) {
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function getApiMessages() {
+        return messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+            imageDataUrl: m.imageDataUrl || null
+        }));
+    }
+
+    function findLatestEditableImage(historyMessages) {
+        for (let i = historyMessages.length - 1; i >= 0; i--) {
+            const msg = historyMessages[i];
+            if (!msg) continue;
+            // Priority 1: user-attached image from paste/import.
+            if (msg.imageDataUrl) return msg.imageDataUrl;
+            // Priority 2: last generated image from the assistant.
+            if (msg.imageMeta && msg.imageMeta.imageSrc) return msg.imageMeta.imageSrc;
+        }
+        return null;
+    }
+
+    function buildMessagesForProvider(providerId, apiMessages) {
+        return apiMessages.map((m) => {
+            if (m.role !== "user" || !m.imageDataUrl) {
+                return { role: m.role, content: m.content };
+            }
+
+            if (providerId === "github") {
+                return {
+                    role: "user",
+                    content: [
+                        { type: "text", text: m.content || "Analyse cette image." },
+                        { type: "image_url", image_url: { url: m.imageDataUrl } }
+                    ]
+                };
+            }
+
+            const joinedText = [
+                m.content || "Analyse cette image.",
+                "[Image jointe par l'utilisateur: veuillez analyser l'image.]"
+            ].join("\n\n");
+            return { role: "user", content: joinedText };
+        });
+    }
+
+    function providerHeaderLabel(providerId) {
+        if (providerId === "cerebras") return "gpt oss (cerebras)";
+        if (providerId === "groq") return "gpt oss (groq)";
+        if (providerId === "openrouter") return "gpt oss (openrouter)";
+        return "gpt-4o";
+    }
+
+    function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function scrollToBottom() {
+        chatZone.scrollTop = chatZone.scrollHeight;
+    }
+
+    function renderComposerAttachment() {
+        if (!pendingImage) {
+            composerAttachment.style.display = "none";
+            composerAttachment.innerHTML = "";
+            return;
+        }
+
+        composerAttachment.style.display = "block";
+        composerAttachment.innerHTML = `
+            <div class="attachment-chip">
+                <img class="attachment-thumb" src="${pendingImage.dataUrl}" alt="image importee" />
+                <span class="attachment-label">Image jointe</span>
+                <button class="attachment-remove" type="button" title="Retirer l'image">
+                    <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+        `;
+
+        const removeBtn = composerAttachment.querySelector(".attachment-remove");
+        removeBtn.addEventListener("click", () => {
+            pendingImage = null;
+            imageInput.value = "";
+            renderComposerAttachment();
+        });
+    }
+
+    function addUserMsg(text, imageDataUrl) {
+        const div = document.createElement("div");
+        div.className = "message-row msg-user";
+        const safeText = text ? escapeHTML(text).replace(/\n/g, "<br/>") : "";
+        const imageHtml = imageDataUrl ? `<img class="generated-image" src="${imageDataUrl}" alt="image utilisateur" style="margin-top:${safeText ? "10px" : "0"}; max-width: 280px;" />` : "";
+        div.innerHTML = `<div class="bubble-user">${safeText}${imageHtml}</div>`;
+        chatZone.appendChild(div);
+        scrollToBottom();
+    }
+
+    function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    async function setPendingImageFromFile(file) {
+        if (!file || !file.type.startsWith("image/")) return;
+        const dataUrl = await fileToDataUrl(file);
+        pendingImage = {
+            dataUrl,
+            mimeType: file.type || "image/png",
+            name: file.name || "image"
+        };
+        renderComposerAttachment();
+    }
+
+    function findLatestUserImage(apiMessages) {
+        for (let i = apiMessages.length - 1; i >= 0; i--) {
+            if (apiMessages[i].role === "user" && apiMessages[i].imageDataUrl) {
+                return apiMessages[i].imageDataUrl;
+            }
+        }
+        return null;
+    }
+
+    function addAiMsgPlaceholder() {
+        const initialProvider = CHAT_PROVIDERS[activeProviderIndex]?.id || "github";
+        const div = document.createElement("div");
+        div.className = "message-row msg-ai";
+        div.innerHTML = `
+            <div class="bubble-ai">
+                <div class="ai-header"><div class="loader"></div><span class="ai-model-label">${escapeHTML(providerHeaderLabel(initialProvider))} :</span></div>
+                <div class="ai-content"></div>
+                <div class="ai-image-zone"></div>
+                <div class="ai-after-content"></div>
+                <div class="ai-footer" style="display:none;">
+                    <button class="icon-btn copy-btn" title="Copier">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                    <button class="icon-btn regen-btn" title="Recommencer">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <polyline points="23 20 23 14 17 14"></polyline>
+                            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+        chatZone.appendChild(div);
+        scrollToBottom();
+        return div;
+    }
+
+    function extractImageDirective(text) {
+        const lines = String(text).split("\n");
+        const idx = lines.findIndex((line) => /^\s*\/\/\s*image\s*:/i.test(line));
+        if (idx === -1) return null;
+        const prompt = lines[idx].replace(/^\s*\/\/\s*image\s*:/i, "").trim();
+        if (!prompt) return null;
+        return {
+            prompt,
+            beforeText: lines.slice(0, idx).join("\n").trim(),
+            afterText: lines.slice(idx + 1).join("\n").trim()
+        };
+    }
+
+    function extractUrlDirective(text) {
+        const lines = String(text).split("\n");
+        const idx = lines.findIndex((line) => /^\s*\/\/\s*url\s*:/i.test(line));
+        if (idx === -1) return null;
+        const rawUrl = lines[idx].replace(/^\s*\/\/\s*url\s*:/i, "").trim();
+        if (!/^https?:\/\//i.test(rawUrl)) return null;
+        return {
+            url: rawUrl,
+            beforeText: lines.slice(0, idx).join("\n").trim(),
+            afterText: lines.slice(idx + 1).join("\n").trim()
+        };
+    }
+
+    function getDomainLabel(url) {
+        try {
+            return new URL(url).hostname.replace(/^www\./i, "");
+        } catch (_) {
+            return url;
+        }
+    }
+
+    function renderWebBlocks(targetDiv, blocks) {
+        targetDiv.innerHTML = blocks.map((block) => {
+            if (block.type === "text") {
+                return `<div class="web-block-text">${escapeHTML(block.text).replace(/\n/g, "<br/>")}</div>`;
+            }
+
+            const domain = escapeHTML(getDomainLabel(block.url));
+            let indicator = `<span class="web-visit-indicator"><span class="visit-spinner"></span></span>`;
+            if (block.status === "done") {
+                indicator = `<span class="web-visit-indicator"><svg class="visit-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>`;
+            }
+            if (block.status === "error") {
+                indicator = `<span class="web-visit-indicator" style="color:#d14343;">●</span>`;
+            }
+
+            return `<div class="web-visit-row">visite ${domain} ${indicator}</div>`;
+        }).join("");
+    }
+
+    async function blobToDataUrl(blob) {
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    function buildImageForm(prompt) {
+        const form = new FormData();
+        form.append("prompt", prompt);
+        form.append("steps", "25");
+        form.append("width", "1024");
+        form.append("height", "1024");
+        return form;
+    }
+
+    function normalizeWorkerImageSource(payload) {
+        const maybe = payload?.result?.image || payload?.image || payload?.result || payload?.data;
+        if (!maybe) return null;
+        if (typeof maybe !== "string") return null;
+        if (maybe.startsWith("data:image/")) return maybe;
+        if (maybe.startsWith("http://") || maybe.startsWith("https://")) return maybe;
+        return `data:image/png;base64,${maybe}`;
+    }
+
+    async function generateImageWithCloudflare(prompt) {
+        const t0 = performance.now();
+        const res = await fetchWithTimeout(CF_WORKER_IMAGE_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt })
+        }, 120000);
+
+        const text = await res.text();
+        let json;
+        try {
+            json = text ? JSON.parse(text) : null;
+        } catch (_) {
+            throw new Error("Le worker image a renvoye une reponse invalide.");
+        }
+
+        if (!res.ok || json?.ok === false) {
+            const reason = json?.error || `Erreur worker (${res.status})`;
+            throw new Error(reason);
+        }
+
+        const imageSrc = normalizeWorkerImageSource(json);
+        if (!imageSrc) throw new Error("Image introuvable dans la reponse du worker.");
+
+        return {
+            imageSrc,
+            durationSec: (performance.now() - t0) / 1000
+        };
+    }
+
+    async function parseCloudflareImageResponse(res, durationSec) {
+        const ctype = res.headers.get("content-type") || "";
+
+        if (ctype.includes("application/json") || ctype.includes("text/json")) {
+            const data = await res.json();
+            const rawImage = data?.result?.image || data?.image;
+            if (!rawImage) throw new Error("Réponse image invalide");
+            if (String(rawImage).startsWith("data:image") || String(rawImage).startsWith("http")) {
+                return { imageSrc: rawImage, durationSec };
+            }
+            return { imageSrc: `data:image/png;base64,${rawImage}`, durationSec };
+        }
+
+        const blob = await res.blob();
+        const imageSrc = await blobToDataUrl(blob);
+        return { imageSrc, durationSec };
+    }
+
+    async function fetchWithTimeout(url, options, timeoutMs) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            return await fetch(url, { ...options, signal: controller.signal });
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    async function generateImageWithCloudflare(prompt) {
+        const start = performance.now();
+        const res = await fetchWithTimeout(CF_DIRECT_URL, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${CF_TOKEN}` },
+            body: buildImageForm(prompt)
+        }, 45000);
+
+        if (!res.ok) {
+            const raw = await res.text();
+            throw new Error(`Impossible de générer l'image: ${res.status} ${raw.slice(0, 200)}`);
+        }
+
+        const durationSec = (performance.now() - start) / 1000;
+        return await parseCloudflareImageResponse(res, durationSec);
+    }
+
+    async function fetchWebsiteCode(url) {
+        const parsedUrl = new URL(url);
+        const host = parsedUrl.hostname.toLowerCase();
+        const isWikipedia = /(^|\.)wikipedia\.org$/.test(host);
+
+        if (isWikipedia) {
+            const wikiPathMatch = parsedUrl.pathname.match(/^\/wiki\/(.+)$/i);
+            const pageTitle = wikiPathMatch ? decodeURIComponent(wikiPathMatch[1]) : null;
+
+            if (pageTitle) {
+                const apiUrl = `https://${host}/w/api.php?action=parse&page=${encodeURIComponent(pageTitle)}&prop=text&format=json&origin=*`;
+                const wikiRes = await fetchWithTimeout(apiUrl, { method: "GET" }, 30000);
+                if (!wikiRes.ok) {
+                    const errorText = await wikiRes.text();
+                    throw new Error(`Visite Wikipedia impossible (${wikiRes.status}): ${errorText.slice(0, 180)}`);
+                }
+                const wikiJson = await wikiRes.json();
+                const html = wikiJson?.parse?.text?.["*"] || "";
+                if (!html.trim()) throw new Error("Contenu Wikipedia vide");
+                return html.slice(0, 16000);
+            }
+
+            const directWikiRes = await fetchWithTimeout(url, { method: "GET" }, 30000);
+            if (!directWikiRes.ok) {
+                const errorText = await directWikiRes.text();
+                throw new Error(`Visite Wikipedia impossible (${directWikiRes.status}): ${errorText.slice(0, 180)}`);
+            }
+            const wikiText = await directWikiRes.text();
+            if (!wikiText.trim()) throw new Error("Contenu Wikipedia vide");
+            return wikiText.slice(0, 16000);
+        }
+
+        const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`;
+        const response = await fetchWithTimeout(proxyUrl, { method: "GET" }, 30000);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Visite impossible (${response.status}): ${errorText.slice(0, 180)}`);
+        }
+        const text = await response.text();
+        if (/too many requests/i.test(text) && /github/i.test(text)) {
+            throw new Error("Le site cible limite les requêtes en ce moment (Too many requests).");
+        }
+        if (!text || !text.trim()) throw new Error("Contenu web vide");
+        return text.slice(0, 16000);
+    }
+
+    let lastChatRequestAt = 0;
+    let githubTokenIndex = 0;
+    let activeProviderIndex = 0;
+
+    const CHAT_PROVIDERS = [
+        { id: "github", label: "GitHub gpt-4o" },
+        { id: "cerebras", label: "Cerebras gpt-oss-120b" },
+        { id: "groq", label: "Groq gpt-oss-120b" },
+        { id: "openrouter", label: "OpenRouter gpt-oss-120b:free" }
+    ];
+
+    async function fetchJsonWithTimeout(url, options, timeoutMs) {
+        const res = await fetchWithTimeout(url, options, timeoutMs);
+        const text = await res.text();
+        let json = null;
+        try { json = text ? JSON.parse(text) : null; } catch (_) { json = null; }
+        if (!res.ok) {
+            throw new Error((json && (json.error?.message || json.error)) || text || `Erreur API (${res.status})`);
+        }
+        return json;
+    }
+
+    async function requestViaGithub(apiMessages) {
+        if (!Array.isArray(GITHUB_TOKENS) || GITHUB_TOKENS.length === 0) {
+            throw new Error("Aucun token GitHub configure.");
+        }
+
+        const tokenErrors = [];
+        const startIndex = githubTokenIndex;
+
+        for (let i = 0; i < GITHUB_TOKENS.length; i++) {
+            const tokenIdx = (startIndex + i) % GITHUB_TOKENS.length;
+            const token = GITHUB_TOKENS[tokenIdx];
+
+            try {
+                const data = await fetchJsonWithTimeout(ENDPOINT, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        model: "openai/gpt-4o",
+                        messages: apiMessages,
+                        temperature: 1.0,
+                        top_p: 1.0,
+                        max_tokens: 1000
+                    })
+                }, 45000);
+
+                const content = data?.choices?.[0]?.message?.content;
+                if (!content) throw new Error("Reponse vide de GitHub gpt-4o.");
+
+                // Alterne le token pour le prochain appel, meme en cas de succes.
+                githubTokenIndex = (tokenIdx + 1) % GITHUB_TOKENS.length;
+                return content;
+            } catch (err) {
+                tokenErrors.push(`token ${tokenIdx + 1}: ${err.message}`);
+            }
+        }
+
+        throw new Error(`Tous les tokens GitHub ont echoue. ${tokenErrors.join(" | ")}`);
+    }
+
+    async function requestViaCerebras(apiMessages) {
+        const data = await fetchJsonWithTimeout("https://api.cerebras.ai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + CEREBRAS_API_KEY
+            },
+            body: JSON.stringify({
+                model: "gpt-oss-120b",
+                stream: false,
+                max_tokens: 4096,
+                temperature: 1,
+                top_p: 1,
+                reasoning_effort: "medium",
+                messages: apiMessages
+            })
+        }, 45000);
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content) throw new Error("Reponse vide de Cerebras.");
+        return content;
+    }
+
+    async function requestViaGroq(apiMessages) {
+        const data = await fetchJsonWithTimeout("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + GROQ_API_KEY
+            },
+            body: JSON.stringify({
+                messages: apiMessages,
+                model: "openai/gpt-oss-120b",
+                temperature: 1,
+                max_completion_tokens: 8192,
+                top_p: 1,
+                stream: false,
+                reasoning_effort: "medium"
+            })
+        }, 45000);
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content) throw new Error("Reponse vide de Groq.");
+        return content;
+    }
+
+    async function requestViaOpenRouter(apiMessages) {
+        const data = await fetchJsonWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + OPENROUTER_API_KEY
+            },
+            body: JSON.stringify({
+                model: "openai/gpt-oss-120b:free",
+                messages: apiMessages,
+                stream: false,
+                temperature: 1,
+                top_p: 1,
+                max_tokens: 4096,
+                reasoning_effort: "medium"
+            })
+        }, 45000);
+        const content = data?.choices?.[0]?.message?.content;
+        if (!content) throw new Error("Reponse vide de OpenRouter.");
+        return content;
+    }
+
+    async function requestWithProvider(providerId, apiMessages) {
+        if (providerId === "github") return await requestViaGithub(apiMessages);
+        if (providerId === "cerebras") return await requestViaCerebras(apiMessages);
+        if (providerId === "groq") return await requestViaGroq(apiMessages);
+        if (providerId === "openrouter") return await requestViaOpenRouter(apiMessages);
+        throw new Error("Provider inconnu.");
+    }
+
+    async function requestChatCompletion(apiMessages, onProviderTry) {
+        const minGapMs = 650;
+        const delta = Date.now() - lastChatRequestAt;
+        if (delta < minGapMs) await sleep(minGapMs - delta);
+
+        const errors = [];
+
+        for (let i = 0; i < CHAT_PROVIDERS.length; i++) {
+            const idx = (activeProviderIndex + i) % CHAT_PROVIDERS.length;
+            const provider = CHAT_PROVIDERS[idx];
+            try {
+                if (typeof onProviderTry === "function") onProviderTry(provider.id);
+                lastChatRequestAt = Date.now();
+                const content = await requestWithProvider(provider.id, apiMessages);
+                activeProviderIndex = idx;
+                return { content, providerId: provider.id };
+            } catch (err) {
+                errors.push(`${provider.label}: ${err.message}`);
+                activeProviderIndex = (idx + 1) % CHAT_PROVIDERS.length;
+            }
+        }
+
+        throw new Error(`Tous les fournisseurs ont echoue. ${errors.join(" | ")}`);
+    }
+
+    async function processWebVisits(placeholderDiv, baseApiMessages, initialReply) {
+        const loader = placeholderDiv.querySelector(".loader");
+        const contentDiv = placeholderDiv.querySelector(".ai-content");
+        loader.style.display = "none";
+
+        const blocks = [];
+        let pendingText = initialReply;
+        const workingMessages = [...baseApiMessages, { role: "assistant", content: initialReply }];
+        let hopCount = 0;
+
+        while (hopCount < 3) {
+            const parsed = extractUrlDirective(pendingText);
+            if (!parsed) {
+                if (pendingText.trim()) blocks.push({ type: "text", text: pendingText.trim() });
+                break;
+            }
+
+            if (parsed.beforeText.trim()) blocks.push({ type: "text", text: parsed.beforeText.trim() });
+
+            const visitBlock = { type: "visit", url: parsed.url, status: "loading" };
+            blocks.push(visitBlock);
+            renderWebBlocks(contentDiv, blocks);
+            scrollToBottom();
+
+            try {
+                const pageCode = await fetchWebsiteCode(parsed.url);
+                visitBlock.status = "done";
+                renderWebBlocks(contentDiv, blocks);
+                scrollToBottom();
+
+                const continuationInstruction = [
+                    `Visite web terminée: ${parsed.url}`,
+                    "Voici le contenu brut de la page (extrait):",
+                    pageCode,
+                    "Continue la même réponse, sans te répéter.",
+                    "Si tu dois visiter un autre site, termine encore ton message par une seule ligne: //url: https://..."
+                ].join("\n\n");
+
+                workingMessages.push({ role: "user", content: continuationInstruction });
+                const continuationResult = await requestChatCompletion(workingMessages);
+                const continuation = continuationResult.content;
+                workingMessages.push({ role: "assistant", content: continuation });
+
+                pendingText = [parsed.afterText, continuation].filter(Boolean).join("\n").trim();
+            } catch (error) {
+                visitBlock.status = "error";
+                renderWebBlocks(contentDiv, blocks);
+                const fallbackLine = `Je n'ai pas pu visiter ${parsed.url} pour le moment.`;
+                pendingText = [parsed.afterText, fallbackLine].filter(Boolean).join("\n").trim();
+                break;
+            }
+
+            hopCount += 1;
+        }
+
+        if (hopCount >= 3 && extractUrlDirective(pendingText)) {
+            pendingText = pendingText.replace(/^\s*\/\/\s*url\s*:\s*.+$/gim, "").trim();
+            pendingText = [pendingText, "J'ai atteint la limite de visites web pour cette réponse."].filter(Boolean).join("\n");
+        }
+
+        if (pendingText.trim()) blocks.push({ type: "text", text: pendingText.trim() });
+        renderWebBlocks(contentDiv, blocks);
+
+        const finalText = blocks
+            .filter((block) => block.type === "text")
+            .map((block) => block.text)
+            .join("\n\n")
+            .trim();
+
+        return {
+            finalText: finalText || initialReply,
+            renderBlocks: blocks.map((block) => ({ ...block }))
+        };
+    }
+
+    function addImageLoadingState(zone) {
+        const card = document.createElement("div");
+        card.className = "image-loading-card";
+        const timer = document.createElement("div");
+        timer.className = "image-timer";
+        timer.textContent = "0.0s";
+        card.appendChild(timer);
+        zone.appendChild(card);
+
+        const t0 = performance.now();
+        const timerId = setInterval(() => {
+            timer.textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s`;
+        }, 100);
+
+        return {
+            remove: () => {
+                clearInterval(timerId);
+                card.remove();
+            }
+        };
+    }
+
+    function attachTextCopyBehavior(copyBtn, text) {
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(text);
+            const original = copyBtn.innerHTML;
+            copyBtn.innerHTML = `<svg viewBox="0 0 24 24" style="stroke:#10a37f;animation:checkPop 0.3s ease-in-out;"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            setTimeout(() => { copyBtn.innerHTML = original; }, 900);
+        };
+    }
+
+    function animateFooterFromRandom(footerDiv) {
+        const sideX = Math.random() > 0.5 ? 1 : -1;
+        const sideY = Math.random() > 0.5 ? 1 : -1;
+        const randomX = sideX * (Math.floor(Math.random() * 400) + 200);
+        const randomY = sideY * (Math.floor(Math.random() * 300) + 100);
+        footerDiv.animate(
+            [
+                { transform: `translate(${randomX}px, ${randomY}px)`, opacity: 0 },
+                { transform: "translate(0px, 0px)", opacity: 1 }
+            ],
+            { duration: 500, easing: "ease-out" }
+        );
+    }
+
+    function buildImageActions(zone, imageSrc, durationSec) {
+        const metaRow = document.createElement("div");
+        metaRow.className = "image-meta-row";
+
+        const timeEl = document.createElement("div");
+        timeEl.className = "generation-time";
+        timeEl.textContent = `${durationSec.toFixed(1)} secondes de génération`;
+
+        const actionRow = document.createElement("div");
+        actionRow.className = "image-action-row";
+        actionRow.innerHTML = `
+            <button class="image-btn copy-image-btn" type="button">
+                <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copier l'image
+            </button>
+            <button class="image-btn download-image-btn" type="button">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Télécharger l'image
+            </button>
+        `;
+
+        const copyImageBtn = actionRow.querySelector(".copy-image-btn");
+        const downloadBtn = actionRow.querySelector(".download-image-btn");
+
+        copyImageBtn.addEventListener("click", async () => {
+            try {
+                const response = await fetch(imageSrc);
+                const blob = await response.blob();
+                await navigator.clipboard.write([new ClipboardItem({ [blob.type || "image/png"]: blob })]);
+            } catch (_) {
+                alert("Copie d'image non disponible sur ce navigateur.");
             }
         });
-    </script>
+
+        downloadBtn.addEventListener("click", () => {
+            const a = document.createElement("a");
+            a.href = imageSrc;
+            a.download = "gpt-4o-image.png";
+            a.click();
+        });
+
+        metaRow.appendChild(timeEl);
+        metaRow.appendChild(actionRow);
+        zone.appendChild(metaRow);
+    }
+
+    async function renderAssistantMessageUI(placeholderDiv, assistantMsg, msgIndex, animateFooter) {
+        const loader = placeholderDiv.querySelector(".loader");
+        const modelLabel = placeholderDiv.querySelector(".ai-model-label");
+        const contentDiv = placeholderDiv.querySelector(".ai-content");
+        const imageZone = placeholderDiv.querySelector(".ai-image-zone");
+        const afterContentDiv = placeholderDiv.querySelector(".ai-after-content");
+        const footerDiv = placeholderDiv.querySelector(".ai-footer");
+        const copyBtn = placeholderDiv.querySelector(".copy-btn");
+        const regenBtn = placeholderDiv.querySelector(".regen-btn");
+
+        loader.style.display = "none";
+        modelLabel.textContent = `${providerHeaderLabel(assistantMsg.providerId)} :`;
+
+        if (Array.isArray(assistantMsg.renderBlocks) && assistantMsg.renderBlocks.length) {
+            renderWebBlocks(contentDiv, assistantMsg.renderBlocks);
+        }
+
+        if (!assistantMsg.renderBlocks) {
+            const parsed = extractImageDirective(assistantMsg.content);
+            if (!parsed) {
+                renderRichAssistantText(contentDiv, assistantMsg.content);
+            } else {
+                renderRichAssistantText(contentDiv, parsed.beforeText);
+                let imageMeta = assistantMsg.imageMeta;
+                if (!imageMeta) {
+                    const loading = addImageLoadingState(imageZone);
+                    scrollToBottom();
+                    const requestedHandle = extractImageHandleReference(parsed.prompt);
+                    const generationPrompt = stripImageHandleFromPrompt(parsed.prompt) || parsed.prompt;
+                    const sourceImage = requestedHandle
+                        ? findImageByHandle(requestedHandle, messages.slice(0, msgIndex)) || findLatestEditableImage(messages.slice(0, msgIndex))
+                        : findLatestEditableImage(messages.slice(0, msgIndex));
+                    const { imageSrc, durationSec } = await generateImageWithCloudflare(generationPrompt, sourceImage);
+                    loading.remove();
+                    imageMeta = {
+                        prompt: parsed.prompt,
+                        imageSrc,
+                        durationSec,
+                        sourceImageUsed: !!sourceImage,
+                        sourceImageHandle: requestedHandle,
+                        imageHandle: createImageHandle("flux")
+                    };
+                    assistantMsg.imageMeta = imageMeta;
+                }
+
+                const img = document.createElement("img");
+                img.className = "generated-image";
+                img.src = imageMeta.imageSrc;
+                img.alt = parsed.prompt;
+                imageZone.appendChild(img);
+                buildImageActions(imageZone, imageMeta.imageSrc, imageMeta.durationSec);
+
+                if (imageMeta.imageHandle) {
+                    const tagEl = document.createElement("div");
+                    tagEl.className = "generation-time";
+                    tagEl.textContent = `Tag image: ${imageMeta.imageHandle}`;
+                    imageZone.appendChild(tagEl);
+                }
+
+                renderRichAssistantText(afterContentDiv, parsed.afterText);
+            }
+        }
+
+        footerDiv.style.display = "flex";
+        attachTextCopyBehavior(copyBtn, assistantMsg.content);
+
+        regenBtn.onclick = async () => {
+            messages = messages.slice(0, msgIndex);
+            if (activeConvIndex !== null) conversations[activeConvIndex].messages = [...messages];
+            await rerenderConversation();
+            const newPlaceholder = addAiMsgPlaceholder();
+            await fetchAI(newPlaceholder);
+        };
+
+        if (animateFooter) animateFooterFromRandom(footerDiv);
+    }
+
+    async function rerenderConversation() {
+        chatZone.innerHTML = "";
+        for (let i = 1; i < messages.length; i++) {
+            const msg = messages[i];
+            if (msg.role === "user") {
+                addUserMsg(msg.displayContent || msg.content, msg.imageDataUrl);
+            } else {
+                const placeholder = addAiMsgPlaceholder();
+                await renderAssistantMessageUI(placeholder, msg, i, false);
+            }
+        }
+        scrollToBottom();
+    }
+
+    function updateHistoryList() {
+        historyList.innerHTML = "";
+        conversations.forEach((conv, index) => {
+            const item = document.createElement("div");
+            item.className = "history-item" + (index === activeConvIndex ? " active" : "");
+            item.textContent = conv.title;
+            item.addEventListener("click", async () => {
+                await loadConversation(index);
+                if (window.innerWidth < 768) {
+                    sidebar.classList.remove("open");
+                    menuToggle.classList.remove("open");
+                }
+            });
+            historyList.appendChild(item);
+        });
+    }
+
+    async function loadConversation(index) {
+        activeConvIndex = index;
+        messages = conversations[index].messages.map((m) => ({ ...m }));
+        bgName.style.opacity = "0";
+        bgName.style.display = "none";
+        isFirstMsg = false;
+        updateHistoryList();
+        await rerenderConversation();
+    }
+
+    function buildImageContextHint(message) {
+        const imageDataUrl = message.imageDataUrl || message.imageMeta?.imageSrc;
+        const imageHandle = message.imageHandle || message.imageMeta?.imageHandle;
+        if (!imageDataUrl || !imageHandle) return "";
+        return `\n\nImage disponible: ${imageHandle}. Tu peux l'analyser visuellement. Pour l'editer avec Flux, utilise //image: ${imageHandle} <instructions en anglais>.`;
+    }
+
+    function getApiMessages() {
+        const apiMessages = messages.map((message) => {
+            if (message.role === "system") return { role: "system", content: message.content };
+            const withImageHint = `${message.content || ""}${buildImageContextHint(message)}`.trim();
+            return { role: message.role, content: withImageHint || (message.content || "") };
+        });
+
+        // Avoid very large payloads: only attach one image per request (latest user image or explicitly tagged image).
+        let latestUserIndex = -1;
+        for (let i = messages.length - 1; i >= 0; i--) {
+            if (messages[i].role === "user") {
+                latestUserIndex = i;
+                break;
+            }
+        }
+
+        if (latestUserIndex === -1) return apiMessages;
+
+        const latestUser = messages[latestUserIndex];
+        const referencedHandle = extractImageHandleReference(latestUser.content || "");
+        let selectedImageDataUrl = null;
+        let selectedImageHandle = null;
+
+        if (referencedHandle) {
+            selectedImageDataUrl = findImageByHandle(referencedHandle, messages.slice(0, latestUserIndex + 1));
+            selectedImageHandle = referencedHandle;
+        }
+
+        if (!selectedImageDataUrl && latestUser.imageDataUrl) {
+            selectedImageDataUrl = latestUser.imageDataUrl;
+            selectedImageHandle = latestUser.imageHandle || null;
+        }
+
+        if (selectedImageDataUrl) {
+            apiMessages[latestUserIndex] = {
+                ...apiMessages[latestUserIndex],
+                imageDataUrl: selectedImageDataUrl,
+                imageHandle: selectedImageHandle
+            };
+        }
+
+        return apiMessages;
+    }
+
+    function buildMessagesForProvider(providerId, apiMessages) {
+        if (providerId === "github") {
+            return apiMessages.map((message) => {
+                if (!message.imageDataUrl) return { role: message.role, content: message.content };
+                return {
+                    role: message.role,
+                    content: [
+                        { type: "text", text: message.content },
+                        { type: "image_url", image_url: { url: message.imageDataUrl } }
+                    ]
+                };
+            });
+        }
+
+        return apiMessages.map((message) => ({
+            role: message.role,
+            content: message.content
+        }));
+    }
+
+    function extractImageHandleReference(prompt) {
+        const match = String(prompt || "").match(/#image(?:joint|flux)\d+/i);
+        return match ? match[0].toLowerCase() : null;
+    }
+
+    function stripImageHandleFromPrompt(prompt) {
+        return String(prompt || "")
+            .replace(/#image(?:joint|flux)\d+/ig, "")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+    }
+
+    function findImageByHandle(handle, list) {
+        if (!handle) return null;
+        const normalized = handle.toLowerCase();
+        for (let i = list.length - 1; i >= 0; i--) {
+            const message = list[i];
+            if (message.imageHandle && String(message.imageHandle).toLowerCase() === normalized && message.imageDataUrl) {
+                return message.imageDataUrl;
+            }
+            if (message.imageMeta && message.imageMeta.imageHandle && String(message.imageMeta.imageHandle).toLowerCase() === normalized && message.imageMeta.imageSrc) {
+                return message.imageMeta.imageSrc;
+            }
+        }
+        return null;
+    }
+
+    async function fetchAI(placeholderDiv) {
+        try {
+            const baseApiMessages = getApiMessages();
+            const modelLabel = placeholderDiv.querySelector(".ai-model-label");
+            const firstResult = await requestChatCompletion(baseApiMessages, (providerId) => {
+                modelLabel.textContent = `${providerHeaderLabel(providerId)} :`;
+            });
+            const firstReply = firstResult.content;
+
+            let assistantMsg;
+            if (extractUrlDirective(firstReply)) {
+                const webResult = await processWebVisits(placeholderDiv, baseApiMessages, firstReply);
+                assistantMsg = {
+                    role: "assistant",
+                    content: webResult.finalText,
+                    renderBlocks: webResult.renderBlocks,
+                    providerId: firstResult.providerId
+                };
+            } else {
+                assistantMsg = { role: "assistant", content: firstReply, providerId: firstResult.providerId };
+            }
+
+            messages.push(assistantMsg);
+
+            if (activeConvIndex !== null) conversations[activeConvIndex].messages = [...messages];
+
+            await renderAssistantMessageUI(placeholderDiv, assistantMsg, messages.length - 1, true);
+            if (activeConvIndex !== null) conversations[activeConvIndex].messages = [...messages];
+        } catch (err) {
+            const loader = placeholderDiv.querySelector(".loader");
+            const contentDiv = placeholderDiv.querySelector(".ai-content");
+            loader.style.display = "none";
+            contentDiv.innerHTML = `<span style="color:red;">Erreur: ${escapeHTML(err.message)}</span>`;
+        }
+        scrollToBottom();
+    }
+
+    // Override robuste: force l'ordre github -> cerebras -> groq -> openrouter a chaque appel.
+    async function requestChatCompletion(apiMessages, onProviderTry) {
+        const minGapMs = 1700;
+        const delta = Date.now() - lastChatRequestAt;
+        if (delta < minGapMs) await sleep(minGapMs - delta);
+
+        const preferredOrder = ["github", "cerebras", "groq", "openrouter"];
+        const providersById = new Map(CHAT_PROVIDERS.map((p) => [p.id, p]));
+        const orderedProviders = preferredOrder
+            .map((id) => providersById.get(id))
+            .filter(Boolean);
+
+        const errors = [];
+        for (const provider of orderedProviders) {
+            try {
+                if (typeof onProviderTry === "function") onProviderTry(provider.id);
+                lastChatRequestAt = Date.now();
+                const providerMessages = buildMessagesForProvider(provider.id, apiMessages);
+                const content = await requestWithProvider(provider.id, providerMessages);
+                activeProviderIndex = CHAT_PROVIDERS.findIndex((p) => p.id === provider.id);
+                return { content, providerId: provider.id };
+            } catch (err) {
+                errors.push(`${provider.label}: ${err.message}`);
+            }
+        }
+
+        throw new Error(`Tous les fournisseurs ont echoue. ${errors.join(" | ")}`);
+    }
+
+    let githubRollingCursor = 0;
+    let githubForbiddenUntil = 0;
+    let githubRateLimitedUntil = 0;
+
+    function loadGithubCooldownState() {
+        try {
+            githubForbiddenUntil = Number(localStorage.getItem("gh_forbidden_until") || "0") || 0;
+            githubRateLimitedUntil = Number(localStorage.getItem("gh_rate_limited_until") || "0") || 0;
+        } catch (_) {}
+    }
+
+    function saveGithubCooldownState() {
+        try {
+            localStorage.setItem("gh_forbidden_until", String(githubForbiddenUntil || 0));
+            localStorage.setItem("gh_rate_limited_until", String(githubRateLimitedUntil || 0));
+        } catch (_) {}
+    }
+
+    loadGithubCooldownState();
+
+    // Override robuste: alterne les tokens GitHub et bascule au suivant au premier echec.
+    async function requestViaGithub(apiMessages) {
+        if (!Array.isArray(GITHUB_TOKENS) || GITHUB_TOKENS.length === 0) {
+            throw new Error("Aucun token GitHub configure.");
+        }
+
+        if (Date.now() < githubRateLimitedUntil) {
+            const waitSec = Math.ceil((githubRateLimitedUntil - Date.now()) / 1000);
+            throw new Error(`GitHub gpt-4o en pause (${waitSec}s restantes) apres une erreur 429.`);
+        }
+
+        if (Date.now() < githubForbiddenUntil) {
+            const waitSec = Math.ceil((githubForbiddenUntil - Date.now()) / 1000);
+            throw new Error(`GitHub gpt-4o temporairement desactive (${waitSec}s restantes) apres des erreurs 403.`);
+        }
+
+        const tokenErrors = [];
+        const total = GITHUB_TOKENS.length;
+        const hasVisionPayload = apiMessages.some((msg) => !!msg.imageDataUrl);
+        const timeoutMs = hasVisionPayload ? 12000 : 20000;
+        const maxAttempts = Math.min(total, hasVisionPayload ? 2 : 3);
+
+        for (let i = 0; i < maxAttempts; i++) {
+            const tokenIndex = (githubRollingCursor + i) % total;
+            const token = GITHUB_TOKENS[tokenIndex];
+
+            try {
+                const res = await fetchWithTimeout(ENDPOINT, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        model: "openai/gpt-4o",
+                        messages: apiMessages,
+                        temperature: 1,
+                        top_p: 1,
+                        max_tokens: 1000
+                    })
+                }, timeoutMs);
+
+                const raw = await res.text();
+                let data = null;
+                try {
+                    data = raw ? JSON.parse(raw) : null;
+                } catch (_) {
+                    data = null;
+                }
+
+                const content = data?.choices?.[0]?.message?.content;
+                if (res.ok && typeof content === "string" && content.trim()) {
+                    githubRollingCursor = (tokenIndex + 1) % total;
+                    if (githubRateLimitedUntil || githubForbiddenUntil) {
+                        githubRateLimitedUntil = 0;
+                        githubForbiddenUntil = 0;
+                        saveGithubCooldownState();
+                    }
+                    return content;
+                }
+
+                if (res.status === 429) {
+                    const retryAfterHeader = Number(res.headers.get("retry-after") || "");
+                    const retryAfterSec = Number.isFinite(retryAfterHeader) && retryAfterHeader > 0 ? retryAfterHeader : 180;
+                    githubRateLimitedUntil = Date.now() + (retryAfterSec * 1000);
+                    saveGithubCooldownState();
+                    throw new Error(`429 rate limit (retry-after: ${retryAfterSec}s)`);
+                }
+
+                const reason = data?.error?.message || data?.message || raw || `HTTP ${res.status}`;
+                tokenErrors.push(`token ${tokenIndex + 1}: ${res.status} ${String(reason).slice(0, 140)}`);
+            } catch (error) {
+                tokenErrors.push(`token ${tokenIndex + 1}: ${error.message}`);
+                if (/\b429\b/.test(String(error.message))) {
+                    // 429 touche souvent le compte global, inutile d'essayer tous les tokens.
+                    break;
+                }
+            }
+        }
+
+        githubRollingCursor = (githubRollingCursor + 1) % total;
+
+        const allForbidden = tokenErrors.length >= maxAttempts && tokenErrors.every((line) => /\b403\b/.test(line));
+        if (allForbidden) {
+            // Evite de marteler l'API si tous les tokens sont refuses en 403.
+            githubForbiddenUntil = Date.now() + (10 * 60 * 1000);
+            saveGithubCooldownState();
+        }
+
+        throw new Error(`GitHub gpt-4o indisponible. ${tokenErrors.join(" | ")}`);
+    }
+
+    // Override robuste: accepte plusieurs formats de reponse du Worker.
+    function normalizeWorkerImageSource(payload) {
+        const looksLikeBase64 = (value) => typeof value === "string" && /^[A-Za-z0-9+/=\n\r]+$/.test(value) && value.length > 128;
+        const toDataUrlIfNeeded = (value) => {
+            if (typeof value !== "string") return null;
+            if (/^data:image\//i.test(value) || /^https?:\/\//i.test(value) || /^blob:/i.test(value)) return value;
+            if (looksLikeBase64(value)) return `data:image/png;base64,${value.replace(/\s+/g, "")}`;
+            return null;
+        };
+
+        const candidates = [
+            payload?.imageDataUrl,
+            payload?.image,
+            payload?.result?.image,
+            payload?.result?.result?.image,
+            payload?.raw?.image,
+            payload?.raw?.result?.image,
+            payload?.data?.[0]?.b64_json,
+            payload?.result?.data?.[0]?.b64_json,
+            payload?.raw?.data?.[0]?.b64_json,
+            payload?.result,
+            payload?.raw
+        ];
+
+        for (const candidate of candidates) {
+            const src = toDataUrlIfNeeded(candidate);
+            if (src) return src;
+        }
+
+        return null;
+    }
+
+    // Final override: image generation goes through the Cloudflare Worker endpoint.
+    async function generateImageWithCloudflare(prompt, sourceImageDataUrl) {
+        const t0 = performance.now();
+        const payload = {
+            prompt,
+            width: 1024,
+            height: 1024,
+            steps: 25
+        };
+
+        if (sourceImageDataUrl) {
+            // Send multiple common field names to maximize worker compatibility for img2img/edit flows.
+            payload.image = sourceImageDataUrl;
+            payload.inputImage = sourceImageDataUrl;
+            payload.imageDataUrl = sourceImageDataUrl;
+            payload.init_image = sourceImageDataUrl;
+            payload.source_image = sourceImageDataUrl;
+        }
+
+        const res = await fetchWithTimeout(CF_WORKER_IMAGE_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        }, 120000);
+
+        const contentType = res.headers.get("content-type") || "";
+
+        if (contentType.includes("image/")) {
+            const blob = await res.blob();
+            const imageSrc = await blobToDataUrl(blob);
+            return { imageSrc, durationSec: (performance.now() - t0) / 1000 };
+        }
+
+        const text = await res.text();
+        let json;
+        try {
+            json = text ? JSON.parse(text) : null;
+        } catch (_) {
+            throw new Error("Le worker image a renvoye une reponse invalide.");
+        }
+
+        if (!res.ok || json?.ok === false) {
+            throw new Error(json?.error || `Erreur worker (${res.status})`);
+        }
+
+        const imageSrc = normalizeWorkerImageSource(json);
+        if (!imageSrc) throw new Error("Image introuvable dans la reponse du worker.");
+
+        return {
+            imageSrc,
+            durationSec: (performance.now() - t0) / 1000
+        };
+    }
+
+    // Override robuste du rendu de code: evite l'affichage parasite "tok-tag" dans le texte.
+    function renderRichAssistantText(container, text) {
+        container.innerHTML = "";
+        const source = String(text || "");
+        const parts = [];
+        const fenceRegex = /```([a-zA-Z0-9_+#.-]*)\n([\s\S]*?)```/g;
+        let lastIndex = 0;
+        let match;
+
+        while ((match = fenceRegex.exec(source)) !== null) {
+            if (match.index > lastIndex) {
+                parts.push({ type: "text", value: source.slice(lastIndex, match.index) });
+            }
+            parts.push({
+                type: "code",
+                lang: (match[1] || "text").toLowerCase(),
+                value: match[2] || ""
+            });
+            lastIndex = fenceRegex.lastIndex;
+        }
+
+        if (lastIndex < source.length) {
+            parts.push({ type: "text", value: source.slice(lastIndex) });
+        }
+
+        if (!parts.length) {
+            const only = document.createElement("div");
+            only.className = "rich-block-text";
+            only.textContent = source;
+            container.appendChild(only);
+            return;
+        }
+
+        for (const part of parts) {
+            if (part.type === "text") {
+                if (!part.value) continue;
+                const block = document.createElement("div");
+                block.className = "rich-block-text";
+                block.textContent = part.value;
+                container.appendChild(block);
+                continue;
+            }
+
+            container.appendChild(buildCodeBlock(part.lang, part.value));
+        }
+    }
+
+    function buildCodeBlock(lang, code) {
+        const wrap = document.createElement("div");
+        wrap.className = "code-wrap";
+
+        const head = document.createElement("div");
+        head.className = "code-head";
+
+        const langEl = document.createElement("span");
+        langEl.className = "code-lang";
+        langEl.textContent = lang || "text";
+
+        const spacer = document.createElement("span");
+        spacer.className = "code-spacer";
+
+        const copyBtn = document.createElement("button");
+        copyBtn.className = "code-head-btn";
+        copyBtn.type = "button";
+        copyBtn.title = "Copier";
+        copyBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+        copyBtn.onclick = async () => {
+            try {
+                await navigator.clipboard.writeText(code);
+            } catch (_) {}
+        };
+
+        const runBtn = document.createElement("button");
+        runBtn.className = "code-head-btn";
+        runBtn.type = "button";
+        runBtn.title = "Executer";
+        runBtn.innerHTML = '<svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19" fill="currentColor" stroke="none"></polygon></svg>';
+        runBtn.onclick = () => openCodePreview(lang, code);
+
+        head.appendChild(langEl);
+        head.appendChild(spacer);
+        head.appendChild(copyBtn);
+        head.appendChild(runBtn);
+
+        const pre = document.createElement("pre");
+        pre.className = "code-pre";
+        pre.innerHTML = highlightCodeForUI(code, lang);
+
+        wrap.appendChild(head);
+        wrap.appendChild(pre);
+        return wrap;
+    }
+
+    function highlightCodeForUI(code, lang) {
+        const escaped = escapeHTML(String(code || ""));
+        const isHtmlLike = /^(html|xml|svg|xhtml|vue)$/i.test(lang);
+        if (isHtmlLike) return highlightHtmlLike(escaped);
+        return highlightJsLike(escaped);
+    }
+
+    function highlightHtmlLike(escapedCode) {
+        return escapedCode
+            .replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="tok-comment">$1</span>')
+            .replace(/(&lt;\/?)([a-zA-Z][\w:-]*)([^&]*?)(\/?&gt;)/g, (full, open, tag, attrs, close) => {
+                const safeAttrs = attrs.replace(/([a-zA-Z_:][\w:.-]*)(=)("[^"]*"|'[^']*')/g,
+                    '<span class="tok-property">$1</span><span class="tok-operator">$2</span><span class="tok-string">$3</span>');
+                return `${open}<span class="tok-tag">${tag}</span>${safeAttrs}${close}`;
+            });
+    }
+
+    function highlightJsLike(escapedCode) {
+        let out = escapedCode;
+        out = out.replace(/(\/\/.*$)/gm, '<span class="tok-comment">$1</span>');
+        out = out.replace(/(\/\*[\s\S]*?\*\/)/g, '<span class="tok-comment">$1</span>');
+        out = out.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)/g, '<span class="tok-string">$1</span>');
+        out = out.replace(/\b(\d+(?:\.\d+)?)\b/g, '<span class="tok-number">$1</span>');
+        out = out.replace(/\b(const|let|var|function|return|if|else|for|while|switch|case|break|continue|new|class|extends|async|await|try|catch|throw|import|from|export|default|null|true|false)\b/g, '<span class="tok-keyword">$1</span>');
+        out = out.replace(/([+\-*\/=!<>|&%]+)/g, '<span class="tok-operator">$1</span>');
+        return out;
+    }
+
+    function openCodePreview(lang, code) {
+        const modal = document.getElementById("preview-modal");
+        const frame = document.getElementById("preview-frame");
+        const close = document.getElementById("preview-close");
+        if (!modal || !frame || !close) return;
+
+        const htmlLike = /^(html|htm)$/i.test(lang);
+        frame.srcdoc = htmlLike
+            ? code
+            : `<!doctype html><html><body><pre style="font-family:monospace;white-space:pre-wrap;margin:16px;">${escapeHTML(code)}</pre></body></html>`;
+
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+
+        if (!close.dataset.bound) {
+            close.addEventListener("click", () => {
+                modal.classList.remove("open");
+                modal.setAttribute("aria-hidden", "true");
+                frame.srcdoc = "";
+            });
+            close.dataset.bound = "1";
+        }
+    }
+
+    async function handleSend() {
+        const text = chatInput.value.trim();
+        if (!text && !pendingImage) return;
+
+        if (isFirstMsg) {
+            bgName.style.opacity = "0";
+            setTimeout(() => { bgName.style.display = "none"; }, 500);
+            isFirstMsg = false;
+        }
+
+        chatInput.value = "";
+        const userText = text || "Analyse cette image.";
+        const attachedImageDataUrl = pendingImage ? pendingImage.dataUrl : null;
+        const attachedImageHandle = pendingImage ? (pendingImage.handle || createImageHandle("joint")) : null;
+
+        addUserMsg(text, attachedImageDataUrl);
+        messages.push({
+            role: "user",
+            content: userText,
+            displayContent: text,
+            imageDataUrl: attachedImageDataUrl,
+            imageHandle: attachedImageHandle
+        });
+        pendingImage = null;
+        imageInput.value = "";
+        renderComposerAttachment();
+
+        if (activeConvIndex === null) {
+            conversations.push({ title: text || "Image", messages: [...messages] });
+            activeConvIndex = conversations.length - 1;
+            updateHistoryList();
+        } else {
+            conversations[activeConvIndex].messages = [...messages];
+        }
+
+        // Force chaque nouvelle generation a tenter d'abord GPT-4o (GitHub).
+        activeProviderIndex = 0;
+        const placeholder = addAiMsgPlaceholder();
+        await fetchAI(placeholder);
+    }
+
+    sendBtn.addEventListener("click", handleSend);
+    chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") handleSend();
+    });
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"e3c1c9af36de41759418005494a48906","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
